@@ -6,3 +6,6 @@ applications:
   name: parmperu
   host: parmperu
   disk_quota: 1024M
+  services:
+  - parmperu-cloudant
+  - parmperu-twilio
