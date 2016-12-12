@@ -1,0 +1,7 @@
+extends ./layout.pug
+block container
+          h1.page-header Reclutamiento
+          form(method='post', enctype='multipart/form-data', action="/parm/upload")
+            input(type='file', name='reclutas')
+            |  
+            button.btn.btn-primary(type='submit') Cargar

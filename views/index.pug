@@ -1,0 +1,26 @@
+doctype html
+html(lang='en')
+  head
+    meta(charset='utf-8')
+    meta(http-equiv='X-UA-Compatible', content='IE=edge')
+    meta(name='viewport', content='width=device-width, initial-scale=1')
+    meta(name='description', content='')
+    meta(name='author', content='')
+    //link(rel='icon', href='../../favicon.ico')
+    title Proyecto RH
+    link(href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css', rel='stylesheet')
+    link(href='/stylesheets/login.css', rel='stylesheet')
+  body
+    .container
+      form.form-signin(action='/login',method='POST')
+        h2.form-signin-heading Iniciar Sesión
+        |  
+        label.sr-only(for='inputEmail') Correo electrónico
+        |  
+        input#inputEmail.form-control(type='email', placeholder='Correo electrónico', required='true', autofocus='',name='email')
+        |  
+        label.sr-only(for='inputPassword') Contraseña
+        |  
+        input#inputPassword.form-control(type='password', placeholder='Contraseña', required='true', name='password')
+
+        button.btn.btn-lg.btn-primary.btn-block(type='submit') Iniciar Sesión
