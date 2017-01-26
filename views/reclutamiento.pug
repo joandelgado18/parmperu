@@ -1,7 +1,60 @@
 extends ./layout.pug
 block container
-          h1.page-header Reclutamiento
-          form(method='post', enctype='multipart/form-data', action="/parm/upload")
-            input(type='file', name='reclutas')
-            |  
-            button.btn.btn-primary(type='submit') Cargar
+  section.content-header
+    h1
+      | Reclutamiento Masivo 
+      small Recluta
+    ol.breadcrumb
+      li.active
+        i.fa.fa-bullhorn
+        |  Reclutamiento Masivo
+  section.content
+    .row
+      .col-md-6
+        .box.box-primary
+          .box-header.with-border
+            h3.box-title Carga de archivo de reclutamiento
+          form#cargar(role='form',method='post', enctype='multipart/form-data', action="/parmsecure/upload")
+            .box-body
+              .form-group
+                input#exampleInputFile(type='file',name='reclutas')
+                p.help-block El archivo debe estar en formato xlsx.
+            .box-footer
+              button.btn.btn-primary(type='submit') Cargar
+      .col-md-6
+        .box.box-info
+          .box-header.with-border
+            h3.box-title Ayuda
+          .box-body
+            p El archivo debe estar en formato xlsx (Excel) y debe contener las siguientes columnas: COLABORADOR, PUESTO *, NOMBRES *, APELLIDO PATERNO *, APELLIDO MATERNO *, CELULAR * y CORREO *.
+            p Las columnas con * son columnas obligatorias.
+            p Puedes descargar una plantilla en el siguiente 
+              a(href='/descargables/Base-PARM.xlsx') enlace
+              | .
+    .row
+      .col-md-12
+        .box.box-solid
+          .box-header.with-border
+            h3.box-title Visor de Carga
+            .pull-right
+              button#confirmar.btn.btn-block.btn-success.btn-xs
+                i.glyphicon.glyphicon-bullhorn
+                span 
+                | Reclutar
+          .box-body
+            table#cargatbl
+              thead
+                tr
+                  th(data-field='colaborador') COLABORADOR
+                  th(data-field='puesto') PUESTO
+                  th(data-field='nombres') NOMBRES
+                  th(data-field='apellidoPaterno') APELLIDO PATERNO
+                  th(data-field='apellidoMaterno') APELLIDO MATERNO
+                  th(data-field='celular') CELULAR
+                  th(data-field='correo') CORREO
+
+    script(type='text/javascript').
+      $(function () {
+        var data = !{reclutascargados}
+        $('#cargatbl').bootstrapTable({data: data});
+      });

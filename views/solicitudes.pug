@@ -1,0 +1,73 @@
+extends ./layout.pug
+block container
+  section.content-header
+    h1
+      | Solicitudes de Registro
+    ol.breadcrumb
+      li
+        i.fa.fa-key
+        |  Admin
+      li.active Lista de Solicitudes
+  section.content
+    .nav-tabs-custom
+      ul.nav.nav-tabs
+        li.active
+          a(href='#tab_1', data-toggle='tab') Solicitudes Pendientes
+        li
+          a(href='#tab_2', data-toggle='tab') Solicitudes Confirmadas
+      .tab-content
+        #tab_1.tab-pane.active
+          #toolbarsolicitudespendientes
+            button#confirmar.btn.btn-success
+              i.glyphicon.glyphicon-ok
+              |  Confirmar
+          table#solicitudespendientes.table.table-hover(data-toggle='table', data-url='/parmsecure/admin/listarsolicitudespendientes', data-toolbar='#toolbarsolicitudespendientes',data-show-refresh="true",data-id-field="RUC")
+            thead
+              tr
+                th(data-field='ID',data-checkbox='true',data-align='center') ID
+                th(data-field='RUC') RUC
+                th(data-field='RAZON_SOCIAL') RAZON SOCIAL
+                th(data-field='CORREO') CORREO
+                th(data-field='TELEFONO') TELEFONO
+                th(data-field='ESTADO',data-formatter='formateadorEstado') ESTADO
+                
+        #tab_2.tab-pane
+          | The European languages are members of the same family. Their separate existence is a myth. For science, music, sport, etc, Europe uses the same vocabulary. The languages only differ in their grammar, their pronunciation and their most common words. Everyone realizes why a new common language would be desirable: one could refuse to pay expensive translators. To achieve this, it would be necessary to have uniform grammar, pronunciation and more common words. If several languages coalesce, the grammar of the resulting language is more simple and regular than that of the individual languages.
+
+  script.
+    $(document).ready(function(){
+      $('#confirmar').click(function (event) {
+          var ids = getIdSelections();
+          $.ajax({
+            type:'GET',
+            url:'/parmsecure/admin/confirmarsolicitud',
+            data:{seleccion:ids},
+            contentType:'application/json',
+            success:function(data,textStatus,jqXHR){
+              $('#solicitudespendientes').bootstrapTable('refresh');
+            },
+            error:function(jqXHR,textStatus,errorThrown){
+              alert(errorThrown);
+              console.log("Hubo un error");
+              console.log(errorThrown);
+            }
+          });
+          event.preventDefault();
+      });
+    });
+
+    function getIdSelections() {
+      return $.map($('#solicitudespendientes').bootstrapTable('getSelections'), function (row) {
+        return {ruc:row.RUC,correo:row.CORREO};
+      });
+    }
+
+    function formateadorEstado(value, row, index) {
+      if(value == '1') {
+        return "<span style='background-color: #FFFF00'>PENDIENTE</span>";
+      } else {
+        return "<span style='background-color: #FF9900'>CODIGO ENVIADO</span>";
+      }
+    }
+
+
