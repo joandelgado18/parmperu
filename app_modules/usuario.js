@@ -14,14 +14,14 @@ function listarUsuarios(){
 	return resultado;
 }
 
-var qRegistrarUsuario = "INSERT INTO PARM.TBL_USUARIO(RUC,CONTRASENA,ROL,ESTADO) VALUES";
+var qRegistrarUsuario = "INSERT INTO PARM.TBL_USUARIO(RUC,CONTRASENA,ROL,ESTADO,FECHA_HORA_REGISTRO,FECHA_HORA_ACTUALIZACION) VALUES";
 function registrarUsuario(usuario){
 	var conn = ibmdb.openSync(connString, options);
-	var result = conn.querySync(qRegistrarUsuario+"('" + usuario.ruc + "','" + usuario.contrasena + "','" + usuario.rol + "','" + usuario.estado + "')");
+	var result = conn.querySync(qRegistrarUsuario+"('" + usuario.ruc + "','" + usuario.contrasena + "','" + usuario.rol + "','" + usuario.estado + "',CURRENT TIMESTAMP, CURRENT TIMESTAMP)");
 	conn.closeSync();
 }
 
-var qAutentificarUsuario = "SELECT TC.RUC,TC.RAZON_SOCIAL,TU.ROL,TU.ESTADO FROM PARM.TBL_USUARIO TU LEFT JOIN PARM.TBL_CLIENTE TC ON TU.RUC=TC.RUC WHERE ESTADO='3' AND ";
+var qAutentificarUsuario = "SELECT TC.RUC,TC.RAZON_SOCIAL,TU.ROL,TU.ESTADO FROM PARM.TBL_USUARIO TU LEFT JOIN PARM.TBL_CLIENTE TC ON TU.RUC=TC.RUC WHERE ";
 function autentificacionUsuario(ruc, contrasena){
 	var conn = ibmdb.openSync(connString, options);
 	var resultado = conn.querySync(qAutentificarUsuario+"TU.RUC='" + ruc + "' AND TU.CONTRASENA='" + contrasena + "'");
@@ -43,8 +43,24 @@ function activarCuenta(ruc,codigoconfirmacion){
 	conn.closeSync();
 }
 
+var qSolicitarReseteoContrasena = "UPDATE PARM.TBL_USUARIO ";
+function solicitarReseteoContrasena(ruc, codigoreseteo){
+	var conn = ibmdb.openSync(connString, options);
+	var resultado = conn.querySync(qSolicitarReseteoContrasena + "SET CODIGO_RESETEO='" + codigoreseteo + "' WHERE RUC='" + ruc + "'");
+	conn.closeSync();
+}
+
+var qResetearContrasena = "UPDATE PARM.TBL_USUARIO ";
+function resetearContrasena(ruc,contrasena,codigoreseteo){
+	var conn = ibmdb.openSync(connString, options);
+	var resultado = conn.querySync(qResetearContrasena + "SET CONTRASENA='" + contrasena + "' WHERE RUC='" + ruc + "' AND CODIGO_RESETEO='" + codigoreseteo + "'");
+	conn.closeSync();
+}
+
 module.exports.listarUsuarios = listarUsuarios;
 module.exports.registrarUsuario = registrarUsuario;
 module.exports.autentificacionUsuario = autentificacionUsuario;
 module.exports.actualizarCodigoConfirmacion = actualizarCodigoConfirmacion;
 module.exports.activarCuenta = activarCuenta;
+module.exports.resetearContrasena = resetearContrasena;
+module.exports.solicitarReseteoContrasena = solicitarReseteoContrasena;

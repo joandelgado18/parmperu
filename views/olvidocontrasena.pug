@@ -16,46 +16,29 @@ html
   body.hold-transition.login-page
     .login-box
       .login-logo
-          | Bienvenido a 
-          b PARM
-      if alert
-        .text-center
-          .alert.alert-warning.alert-dismissible
-            button.close(type='button', data-dismiss='alert', aria-hidden='true') &times;
-            i.icon.fa.fa-ban
-            |  #{alert}
-      if error
-        .text-center
-          .alert.alert-danger.alert-dismissible
-            button.close(type='button', data-dismiss='alert', aria-hidden='true') &times;
-            i.icon.fa.fa-ban
-            |  #{error}
-      if info
-        .text-center
-          .alert.alert-info.alert-dismissible
-            button.close(type='button', data-dismiss='alert', aria-hidden='true') &times;
-            i.icon.fa.fa-info
-            |  #{info}
+          | Resetea tu contraseña
       .login-box-body
-        p.login-box-msg Introduce tus datos para iniciar sesión
-        form(action='/iniciarsesion', method='post')
+        p.login-box-msg Introduce el RUC para enviarte una contraseña temporal a la dirección de correo registrada.
+        form(action='/solicitarreseteo', method='post')
           .form-group.has-feedback
             input.form-control(type='ruc', placeholder='RUC',name='ruc')
             span.glyphicon.glyphicon-briefcase.form-control-feedback
-          .form-group.has-feedback
-            input.form-control(type='password', placeholder='Contraseña',name='contrasena')
-            span.glyphicon.glyphicon-lock.form-control-feedback
           .row
             .col-xs-12
-              button.btn.btn-primary.btn-block.btn-flat(type='submit') Iniciar sesión
+              button.btn.btn-primary.btn-block.btn-flat(type='submit') Resetear mi contraseña
         .social-auth-links.text-center
           p - O -
-        |  
-        a(href='/olvidocontrasena') Olvidé mi contraseña
-        br
-        |  
-        a.text-center(href='/nuevoregistro') Registrar una nueva cuenta
+        .text-center
+          a(href='/') Iniciar sesión
 
     script(src='../../plugins/jQuery/jquery-2.2.3.min.js')
     script(src='../../bootstrap/js/bootstrap.min.js')
     script(src='../../plugins/iCheck/icheck.min.js')
+    script.
+      $(function () {
+      $('input').iCheck({
+      checkboxClass: 'icheckbox_square-blue',
+      radioClass: 'iradio_square-blue',
+      increaseArea: '20%' // optional
+      });
+      });

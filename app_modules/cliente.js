@@ -14,10 +14,10 @@ function listarClientes(){
 	return resultado;
 }
 
-var qRegistrarCliente = "INSERT INTO PARM.TBL_CLIENTE(RUC,RAZON_SOCIAL,DIRECCION,TELEFONO,CORREO) VALUES";
+var qRegistrarCliente = "INSERT INTO PARM.TBL_CLIENTE VALUES";
 function registrarCliente(cliente){
 	var conn = ibmdb.openSync(connString, options);
-	var result = conn.querySync(qRegistrarCliente+"('" + cliente.ruc + "','" + cliente.razonsocial + "','" + cliente.direccion + "','" + cliente.telefono + "','" + cliente.email + "')");
+	var result = conn.querySync(qRegistrarCliente+"('" + cliente.ruc + "','" + cliente.razonsocial + "','" + cliente.direccion + "','" + cliente.telefono + "','" + cliente.email + "',CURRENT TIMESTAMP,CURRENT TIMESTAMP)");
 	conn.closeSync();
 }
 

@@ -2,8 +2,7 @@ extends ./layout.pug
 block container
   section.content-header
     h1
-      | Reclutamiento Masivo 
-      small Recluta
+      | Reclutamiento Masivo
     ol.breadcrumb
       li.active
         i.fa.fa-bullhorn
@@ -26,7 +25,7 @@ block container
           .box-header.with-border
             h3.box-title Ayuda
           .box-body
-            p El archivo debe estar en formato xlsx (Excel) y debe contener las siguientes columnas: COLABORADOR, PUESTO *, NOMBRES *, APELLIDO PATERNO *, APELLIDO MATERNO *, CELULAR * y CORREO *.
+            p El archivo debe estar en formato Excel(xlsx) y debe contener las siguientes columnas: N°, COLABORADOR *, PUESTO *, NOMBRES *, APELLIDO PATERNO *, APELLIDO MATERNO *, CELULAR * y CORREO *.
             p Las columnas con * son columnas obligatorias.
             p Puedes descargar una plantilla en el siguiente 
               a(href='/descargables/Base-PARM.xlsx') enlace
@@ -45,6 +44,7 @@ block container
             table#cargatbl
               thead
                 tr
+                  th(data-field='nro') N°
                   th(data-field='colaborador') COLABORADOR
                   th(data-field='puesto') PUESTO
                   th(data-field='nombres') NOMBRES

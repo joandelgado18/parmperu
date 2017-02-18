@@ -69,7 +69,7 @@ app.get("/nuevoregistro",function(req, res){
 });
 
 app.get("/olvidocontrasena",function(req, res){
-	
+	res.render("olvidocontrasena");
 });
 
 app.get("/activarcuenta", function(req,res){
@@ -92,7 +92,15 @@ app.get("/parmsecure/reclutamiento", function(req,res){
 	res.render("reclutamiento");
 });
 
-app.get("/cerrarsesion",function(req,res){
+app.get("/parmsecure/actividad", function(req, res){
+	res.render("actividad");
+});
+
+app.get("/parmsecure/perfil", function(req, res){
+	res.render("perfil");
+});
+
+app.get("/parmsecure/cerrarsesion",function(req,res){
 	if(req.session.usuario) {
 		req.session.destroy();
 		res.render("login",{info:"Gracias por usar PARM, vuelve pronto!"});
@@ -116,19 +124,43 @@ app.get("/parmsecure/reclutar",function(req, res){
 	    		} else {
 	    			correotmp = row.values[8];
 	    		}
-    			jsonArray.push(json);
-	    		//enviarSms(celular);
+    			/*
+	    		enviarSms(celular);
 	    		var htmlbody = "<h2>Reclutamiento de personal</h2>" + 
 	    		"<p>Estimado " + nombres + ",</p>" +
 	    		"<p>La empresa " + req.session.usuario.RAZON_SOCIAL + " lo invita a una convocatoria para el puesto de " + puesto + ".</p>" +
 	    		"<p></p>";
 	    		enviarCorreo(correotmp,"Convocatoria de personal",correotmp);
-	    		//generarLlamada(celular);
+	    		generarLlamada(celular);
+	    		*/
     		}
     	});
-    	//res.render("reclutamiento",{reclutascargados:JSON.stringify(jsonArray)});
     	res.send("ok");
     });
+});
+
+app.get("/resetearcontrasena",function(req, res){
+	var ruc = req.query.ruc;
+	var codigoReseteo = rq.query.cod;
+	var contrasenaTemmporal = codigoAleatorio("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",8);
+
+	try{
+		usuariodb.resetearContrasena(ruc,contrasenaTemmporal,codigoReseteo);
+
+		var cliente = clientedb.buscarClienteXRuc(ruc);
+
+		var htmlbody = "<3>Estimado Cliente,</h3>" + 
+		"<p>Hemos reseteado la contraseña de su cuenta a una temporal.</p>" +
+		"<p>La contraseña temporal es: <strong>" + contrasenaTemmporal + "</strong></p>" +
+		"<p>Si usted no la solicitó por favor omitir este mensaje.</p>";
+
+		enviarCorreo(cliente.CORREO, "Solicitud de reseteo de contraseña", htmlbody);
+
+		res.render("reseteocontrasenaok");
+	}catch(err){
+		console.log(err);
+		res.render("reseteocontrasenaerror");
+	}
 });
 
 // -- RUTEOS DE ADMINISTRADOR --
@@ -169,12 +201,25 @@ app.post("/registro",function(req, res){
 		clientedb.registrarCliente(cliente);
 		usuariodb.registrarUsuario(usuario);
 
-		var htmlbody = "<h3>Registro de nuevo cliente</h3><p>Se recibió una nueva solicitud de registro del cliente <b>" + cliente.razonsocial + "</b> identificado con ruc <b>" + cliente.ruc + "</b>.</p>" +
+		var htmlAdmin = "<h3>Registro de nuevo cliente</h3><p>Se recibió una nueva solicitud de registro del cliente <b>" + cliente.razonsocial + "</b> identificado con ruc <b>" + cliente.ruc + "</b>.</p>" +
 		"<p>Por favor ingresar a la sección de solicitudes de PARM para aprobar o rechazar la solicitud.</p>"+
 		"<hr></hr>"+
 		"<p>Area de sistemas de PARM</p>";
+		enviarCorreo("parmperu@gmail.com","Confirmación de registro de nuevo cliente.",htmlAdmin);
 
-		enviarCorreo("parmperu@gmail.com","Confirmación de registro de nuevo cliente.",htmlbody);
+		var htmlCliente = "<!DOCTYPE html>"+
+		"<html>" +
+		"<head>" +
+		"<meta charset='utf-8'>" +
+		"</head>" +
+		"<body style='font-family: Calibri'>" +
+		"<h3>Hola " + cliente.razonsocial + ",</h3>" +
+		"<p>Estás recibiendo este correo porque recientemente te has registrado en la plataforma PARM con esta dirección de correo electrónico.<br>" +
+		"Estamos validando tu registro, espera nuestro correo de confirmación para que procedas con la activación de la cuenta.</p>" +
+		"<p>¡Gracias por confiar en la plataforma PARM!</p>" +
+		"</body>" +
+		"</html>";
+		enviarCorreo(cliente.email,"Registro de cuenta PARM", htmlCliente);
 
 		res.render("registrook",{email:cliente.email});
 	}catch(err){
@@ -190,10 +235,52 @@ app.post("/iniciarsesion",function(req,res){
 	var queryuser = usuariodb.autentificacionUsuario(ruc, contrasena);
 
 	if(queryuser.length == 1) {
-		req.session.usuario = queryuser[0];
-		res.redirect("/parmsecure/index");
+		var queryusuario = queryuser[0];
+		if(queryusuario.ESTADO == '3'){
+			req.session.usuario = queryuser[0];
+			res.redirect("/parmsecure/index");
+		} else {
+			res.render("login",{alert:"La cuenta aún no ha sido activada."});
+		}
+		
 	} else {
-		res.render("login",{error:"El ruc ingresado no se encuentra registrado."});
+		res.render("login",{error:"Los datos ingresados no son correctos."});
+	}
+});
+
+app.post("/solicitarreseteo", function (req, res) {
+	var ruc = req.body.ruc;
+
+	try{
+		var codigoReseteo = codigoAleatorio("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",16);
+
+		var cliente = clientedb.buscarClienteXRuc(ruc);
+		usuariodb.solicitarReseteoContrasena(ruc, codigoReseteo);
+		//usuariodb.resetearContrasena(ruc,codigoAleatorio);
+
+		var htmlbody = "<3>Estimado Cliente,</h3>" + 
+		"<p>Hemos recibido una solicitud de reseteo de contraseña, si usted la solicitó, por favor haga click en el siguiente enlace:</p>" +
+		"<p><a href='http://www.parmperu.com.pe/resetearcontrasena?ruc='" + ruc + "'&cod='" + codigoReseteo + "'></a></p>" +
+		"<p>Si usted no la solicitó por favor omitir este mensaje.</p>";
+
+		console.log(cliente.CORREO);
+
+		enviarCorreo(cliente.CORREO, "Solicitud de reseteo de contraseña", htmlbody);
+
+		console.log("todo bien");
+
+		res.render("reseteocontrasenamsg",{
+			ok:"¡La solicitud de reseteo de contraseña fue exitoso!",
+			info:"Le hemos enviado un enlace a su dirección de correo electrónico para proceder con el siguiente paso de reseteo de contraseña."
+		});
+
+	} catch(err) {
+		console.log("todo mal");
+		console.log(err);
+		res.render("reseteocontrasenamsg",{
+			error:"¡Ups! Ocurrió un error durante el proceso de reseteo de su contraseña",
+			info:"Por favor vuelve a intentarlo nuevamente."
+		});
 	}
 });
 
@@ -213,6 +300,7 @@ app.post('/parmsecure/upload', upload.single('reclutas'), function (req, res) {
 	    		}
 
     			var json = {
+    				nro:row.values[1],
     				colaborador:row.values[2],
     				puesto:row.values[3],
     				nombres:row.values[4],
@@ -243,7 +331,7 @@ app.get("/parmsecure/admin/confirmarsolicitud",function(req, res){
 	var htmlbody = "<h3>Código de confirmación</h3>"+
 	"<p>Estimado cliente, el presente correo contiene el enlace para la confirmación de su cuenta. Hacer click en el siguiente enlace para activar su cuenta.</p>";
 	for (var i = seleccion.length - 1; i >= 0; i--) {
-		var codigo = randCode("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",16);
+		var codigo = codigoAleatorio("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",16);
 		usuariodb.actualizarCodigoConfirmacion(seleccion[i].ruc,codigo);
 		htmlbody += "<p><a href='http://www.parmperu.com.pe/activarcuenta?ruc=" + seleccion[i].ruc + "&cod=" + codigo + "'>Activar tu cuenta</a></p>"
 		enviarCorreo(seleccion[i].correo,"Código de confirmación PARM", htmlbody);
@@ -279,16 +367,17 @@ function enviarCorreo(email, asunto, htmlbody){
 	        return console.log(error);
 	    }
 	    console.log('Message sent: ' + info.response);
+	    transporter.close();
 	});
 }
 
-function randCode(chars, lon){
-	var code = "";
+function codigoAleatorio(chars, lon){
+	var codigo = "";
 	for (var x=0; x < lon; x++)	{
-		var rand = Math.floor(Math.random()*chars.length);
-		code += chars.substr(rand, 1);
+		var ale = Math.floor(Math.random()*chars.length);
+		codigo += chars.substr(ale, 1);
 	}
-	return code;
+	return codigo;
 }
 
 app.listen(app.get("port"), "0.0.0.0", function() {

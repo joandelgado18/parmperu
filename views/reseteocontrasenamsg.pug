@@ -3,7 +3,7 @@ html
   head
     meta(charset='utf-8')
     meta(http-equiv='X-UA-Compatible', content='IE=edge')
-    title PARM | Satisfactorio
+    title PARM | Error
     meta(content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no', name='viewport')
     link(rel='stylesheet', href='../../bootstrap/css/bootstrap.min.css')
     link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.5.0/css/font-awesome.min.css')
@@ -17,13 +17,15 @@ html
       .lockscreen-logo
           b PARM
       .text-center
-        .alert.alert-success.alert
-          i.icon.fa.fa-check
-          |  ¡El registro en PARM fue exitoso!
-        p Estamos validando los datos de tu registro, al término te enviaremos un correo a la dirección
-          b #{email} 
-          | con el código de activación.
-        p ¡Gracias por confiar en PARM!
+        if error
+          .alert.alert-danger.alert
+            i.icon.fa.fa-ban
+            |  #{error}
+        if ok
+          .alert.alert-success.alert
+            i.icon.fa.fa-ban
+            |  #{ok}
+        p #{info}
       .text-center
         a(href='/') Iniciar sesión
       .lockscreen-footer.text-center
