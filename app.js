@@ -8,6 +8,7 @@ var nodemailer = require('nodemailer');
 var multer  = require('multer');
 var Excel = require('exceljs');
 var twilio = require('twilio');
+var http = require('http');
 
 var app = express();
 
@@ -39,6 +40,11 @@ var storage = multer.diskStorage({
   }
 });
 var upload = multer({ storage: storage });
+
+// Twilio Credentials 
+var accountSid = 'AC1cbe766e2bfd55280fb89c25ba0664a9';
+var authToken = '2b32e0ac4085065806a7577201f81878';
+var client = new twilio.RestClient(accountSid, authToken);
 
 // -- FILTROS --
 // Filtro de sesion
@@ -111,32 +117,37 @@ app.get("/parmsecure/cerrarsesion",function(req,res){
 
 app.get("/parmsecure/reclutar",function(req, res){
 	var file = req.session.ultimacarga;
-	workbook.xlsx.readFile('./uploads/' + file).then(function() {
-    	var worksheet = workbook.getWorksheet(1);
-    	worksheet.eachRow(function(row, rowNumber){
-    		if(rowNumber != 1) {
-    			var puesto = row.values[3];
-    			var nombres = row.values[4];
-    			var celular = row.values[7];
-    			var correotmp;
-	    		if(typeof row.values[8] === 'object'){
-	    			correotmp = row.values[8].text;
-	    		} else {
-	    			correotmp = row.values[8];
+	if(file){
+		var workbook = new Excel.Workbook();
+		workbook.xlsx.readFile('./uploads/' + file).then(function() {
+	    	var worksheet = workbook.getWorksheet(1);
+	    	worksheet.eachRow(function(row, rowNumber){
+	    		if(rowNumber != 1) {
+	    			var puesto = row.values[3];
+	    			var nombres = row.values[4];
+	    			var celular = row.values[7];
+	    			var correotmp;
+		    		if(typeof row.values[8] === 'object'){
+		    			correotmp = row.values[8].text;
+		    		} else {
+		    			correotmp = row.values[8];
+		    		}
+	    			
+		    		enviarSms(celular);
+		    		var htmlbody = "<h2>Reclutamiento de personal</h2>" + 
+		    		"<p>Estimado " + nombres + ",</p>" +
+		    		"<p>La empresa " + req.session.usuario.RAZON_SOCIAL + " lo invita a una convocatoria para el puesto de " + puesto + ".</p>" +
+		    		"<p></p>";
+		    		enviarCorreo(correotmp,"Convocatoria de personal",correotmp);
+		    		generarLlamada(celular);
 	    		}
-    			/*
-	    		enviarSms(celular);
-	    		var htmlbody = "<h2>Reclutamiento de personal</h2>" + 
-	    		"<p>Estimado " + nombres + ",</p>" +
-	    		"<p>La empresa " + req.session.usuario.RAZON_SOCIAL + " lo invita a una convocatoria para el puesto de " + puesto + ".</p>" +
-	    		"<p></p>";
-	    		enviarCorreo(correotmp,"Convocatoria de personal",correotmp);
-	    		generarLlamada(celular);
-	    		*/
-    		}
-    	});
-    	res.send("ok");
-    });
+	    	});
+	    	res.send("ok");
+	    });
+	} else {
+		console.log("No se ha cargado ningún archivo.");
+	}
+	
 });
 
 app.get("/resetearcontrasena",function(req, res){
@@ -310,9 +321,6 @@ app.post('/parmsecure/upload', upload.single('reclutas'), function (req, res) {
     				correo:correotmp
     			}
     			jsonArray.push(json);
-	    		//enviarSms(celular);
-	    		//enviarCorreo(correo);
-	    		//generarLlamada(celular);
     		}
     	});
     	res.render("reclutamiento",{reclutascargados:JSON.stringify(jsonArray)});
@@ -369,6 +377,38 @@ function enviarCorreo(email, asunto, htmlbody){
 	    console.log('Message sent: ' + info.response);
 	    transporter.close();
 	});
+}
+
+function generarLlamada(numeroCelular) {
+	client.calls.create({
+		to:'+51' + numeroCelular,
+		from: "+51946198461",
+		url:"https://handler.twilio.com/twiml/EH188352b7f9b7ca5e1bd0f121df95043d"
+	}, function(err, call) {
+		if(err) {
+			console.log(err);
+		}
+		console.log(call.sid);
+	});
+}
+
+function enviarSms(numeroCelular){
+	console.log(numeroCelular);
+	var options = {
+		host: 'servicio.smsmasivos.com.ar',
+		path: '/enviar_sms.asp?api=1&relogin=1&usuario=SMSAPI&clave=SMSAPI964&tos=' + numeroCelular + '&idinterno=&texto=SMS%20de%20reclutamiento%20automatico%20de%20personal%20-%20PARM'
+	};
+	var httpreq = http.request(options,function(httpres){
+		var str = '';
+		httpres.on('data', function (chunk) {
+	    	str += chunk;
+	 	});
+
+	 	httpres.on('end', function () {
+	 		console.log(str);
+	 	});
+	});
+	httpreq.end();
 }
 
 function codigoAleatorio(chars, lon){
