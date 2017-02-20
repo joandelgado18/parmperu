@@ -4,6 +4,7 @@ var session = require('express-session');
 var bodyParser = require("body-parser");
 var clientedb = require("./app_modules/cliente.js");
 var usuariodb = require("./app_modules/usuario.js");
+var reclutamientodb = require("./app_modules/registroreclutamiento.js");
 var nodemailer = require('nodemailer');
 var multer  = require('multer');
 var Excel = require('exceljs');
@@ -117,33 +118,71 @@ app.get("/parmsecure/cerrarsesion",function(req,res){
 
 app.get("/parmsecure/reclutar",function(req, res){
 	var file = req.session.ultimacarga;
+	var jsonArray = [];
 	if(file){
 		var workbook = new Excel.Workbook();
 		workbook.xlsx.readFile('./uploads/' + file).then(function() {
 	    	var worksheet = workbook.getWorksheet(1);
 	    	worksheet.eachRow(function(row, rowNumber){
 	    		if(rowNumber != 1) {
-	    			var puesto = row.values[3];
-	    			var nombres = row.values[4];
-	    			var celular = row.values[7];
-	    			var correotmp;
+					var correotmp;
 		    		if(typeof row.values[8] === 'object'){
 		    			correotmp = row.values[8].text;
 		    		} else {
 		    			correotmp = row.values[8];
 		    		}
-	    			
-		    		enviarSms(celular);
-		    		var htmlbody = "<h2>Reclutamiento de personal</h2>" + 
-		    		"<p>Estimado " + nombres + ",</p>" +
-		    		"<p>La empresa " + req.session.usuario.RAZON_SOCIAL + " lo invita a una convocatoria para el puesto de " + puesto + ".</p>" +
-		    		"<p></p>";
-		    		enviarCorreo(correotmp,"Convocatoria de personal",correotmp);
-		    		generarLlamada(celular);
+
+	    			var json = {
+	    				id:Date.now()+ "" + row.values[7],
+	    				nro:row.values[1],
+	    				colaborador:row.values[2],
+	    				puesto:row.values[3],
+	    				nombres:row.values[4],
+	    				apellidoPaterno:row.values[5],
+	    				apellidoMaterno:row.values[6],
+	    				celular:row.values[7],
+	    				correo:correotmp
+	    			}
+
+	    			jsonArray.push(json);
 	    		}
 	    	});
+	    	var finalizado = false;
+	    	
+	    	reclutamientodb.registrarReclutamiento(jsonArray,req.session.usuario.RUC)
+	    	.then(function(){
+	    		console.log("Inicia el envío de mensajes de texto");
+	    		for (var i = jsonArray.length - 1; i >= 0; i--) {
+	    			var recluta = jsonArray[i];
+	    			enviarSms(recluta.celular,recluta.id);
+	    		}
+	    	})
+	    	.then(function(){
+	    		console.log("Inicia las llamadas a celular");
+	    		for (var i = jsonArray.length - 1; i >= 0; i--) {
+	    			var recluta = jsonArray[i];
+	    			generarLlamada(recluta.celular,recluta.id);
+	    		}
+	    	})
+	    	.then(function(){
+	    		console.log("Inicia el envío de correo electrónico");
+	    		for (var i = jsonArray.length - 1; i >= 0; i--) {
+	    			var recluta = jsonArray[i];
+	    			var htmlbody = "<h2>Reclutamiento de personal</h2>" + 
+		    		"<p>Estimado " + recluta.nombres + " " + recluta.apellidoPaterno + " " + recluta.apellidoMaterno + ",</p>" +
+		    		"<p>La empresa " + req.session.usuario.RAZON_SOCIAL + " lo invita a una convocatoria para el puesto de " + recluta.puesto + ".</p>" +
+		    		"<p></p>";
+		    		enviarCorreo(recluta.correo,"Convocatoria de personal",htmlbody,true,recluta.id);
+	    		}
+	    	})
+	    	.fail(function(err){
+	    		console.log(err);
+	    	})
+	    	.done();
+
 	    	res.send("ok");
 	    });
+	    
 	} else {
 		console.log("No se ha cargado ningún archivo.");
 	}
@@ -165,7 +204,7 @@ app.get("/resetearcontrasena",function(req, res){
 		"<p>La contraseña temporal es: <strong>" + contrasenaTemmporal + "</strong></p>" +
 		"<p>Si usted no la solicitó por favor omitir este mensaje.</p>";
 
-		enviarCorreo(cliente.CORREO, "Solicitud de reseteo de contraseña", htmlbody);
+		enviarCorreo(cliente.CORREO, "Solicitud de reseteo de contraseña", htmlbody,false,null);
 
 		res.render("reseteocontrasenaok");
 	}catch(err){
@@ -216,7 +255,7 @@ app.post("/registro",function(req, res){
 		"<p>Por favor ingresar a la sección de solicitudes de PARM para aprobar o rechazar la solicitud.</p>"+
 		"<hr></hr>"+
 		"<p>Area de sistemas de PARM</p>";
-		enviarCorreo("parmperu@gmail.com","Confirmación de registro de nuevo cliente.",htmlAdmin);
+		enviarCorreo("parmperu@gmail.com","Confirmación de registro de nuevo cliente.",htmlAdmin,false,null);
 
 		var htmlCliente = "<!DOCTYPE html>"+
 		"<html>" +
@@ -230,7 +269,7 @@ app.post("/registro",function(req, res){
 		"<p>¡Gracias por confiar en la plataforma PARM!</p>" +
 		"</body>" +
 		"</html>";
-		enviarCorreo(cliente.email,"Registro de cuenta PARM", htmlCliente);
+		enviarCorreo(cliente.email,"Registro de cuenta PARM", htmlCliente,false,null);
 
 		res.render("registrook",{email:cliente.email});
 	}catch(err){
@@ -276,7 +315,7 @@ app.post("/solicitarreseteo", function (req, res) {
 
 		console.log(cliente.CORREO);
 
-		enviarCorreo(cliente.CORREO, "Solicitud de reseteo de contraseña", htmlbody);
+		enviarCorreo(cliente.CORREO, "Solicitud de reseteo de contraseña", htmlbody,false,null);
 
 		console.log("todo bien");
 
@@ -342,13 +381,13 @@ app.get("/parmsecure/admin/confirmarsolicitud",function(req, res){
 		var codigo = codigoAleatorio("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",16);
 		usuariodb.actualizarCodigoConfirmacion(seleccion[i].ruc,codigo);
 		htmlbody += "<p><a href='http://www.parmperu.com.pe/activarcuenta?ruc=" + seleccion[i].ruc + "&cod=" + codigo + "'>Activar tu cuenta</a></p>"
-		enviarCorreo(seleccion[i].correo,"Código de confirmación PARM", htmlbody);
+		enviarCorreo(seleccion[i].correo,"Código de confirmación PARM", htmlbody,false,null);
 	}
 	res.send("ok");
 });
 
 // -- ADICIONAL FUNCTIONS --
-function enviarCorreo(email, asunto, htmlbody){
+function enviarCorreo(email, asunto, htmlbody, actualizarbd, id){
 	var smtpConfig = {
 	    host: 'smtp.gmail.com',
 	    port: 465,
@@ -372,28 +411,37 @@ function enviarCorreo(email, asunto, htmlbody){
 	// send mail with defined transport object 
 	transporter.sendMail(mailOptions, function(error, info){
 	    if(error){
-	        return console.log(error);
+	        console.log(error);
+	        if(actualizarbd){
+	        	reclutamientodb.actualizarResultadoCorreo(id, error);
+	        }
+	    } else {
+	    	console.log(info);
+	    	if(actualizarbd){
+	    		reclutamientodb.actualizarResultadoCorreo(id, info.response);
+	    	}
 	    }
-	    console.log('Message sent: ' + info.response);
 	    transporter.close();
 	});
 }
 
-function generarLlamada(numeroCelular) {
+function generarLlamada(numeroCelular,id) {
 	client.calls.create({
 		to:'+51' + numeroCelular,
 		from: "+51946198461",
 		url:"https://handler.twilio.com/twiml/EH188352b7f9b7ca5e1bd0f121df95043d"
 	}, function(err, call) {
 		if(err) {
-			console.log(err);
+			console.log(err.status);
+			reclutamientodb.actualizarResultadoLlamada(id,err.status);
+		} else {
+			console.log(call.sid);
+			reclutamientodb.actualizarResultadoLlamada(id,call.sid);
 		}
-		console.log(call.sid);
 	});
 }
 
-function enviarSms(numeroCelular){
-	console.log(numeroCelular);
+function enviarSms(numeroCelular,id){
 	var options = {
 		host: 'servicio.smsmasivos.com.ar',
 		path: '/enviar_sms.asp?api=1&relogin=1&usuario=SMSAPI&clave=SMSAPI964&tos=' + numeroCelular + '&idinterno=&texto=SMS%20de%20reclutamiento%20automatico%20de%20personal%20-%20PARM'
@@ -403,9 +451,9 @@ function enviarSms(numeroCelular){
 		httpres.on('data', function (chunk) {
 	    	str += chunk;
 	 	});
-
 	 	httpres.on('end', function () {
 	 		console.log(str);
+	 		reclutamientodb.actualizarResultadoSms(id,str);
 	 	});
 	});
 	httpreq.end();
